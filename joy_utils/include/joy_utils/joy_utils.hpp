@@ -13,16 +13,32 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/joy.hpp>
+#include <joy_utils_msgs/msg/joy_utils.hpp>
 
-#include "button.hpp"
+#include "joy_input.hpp"
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;
 
+struct JoyInput
+{
+	std::string button_;
+	double val_;
+	double val_prev_;
+	int n_;
+	rclcpp::Time time_;
+	double deadband_;
+}
+
 class JoyUtils : public rclcpp::Node
 {
+
+
+
 public:
+
 	sensor_msgs::msg::Joy input_msg_;
+	joy_utils_msgs::msg::JoyUtils remapped_msg_;
 
 
 	JoyUtils(std::string _node_name);
@@ -30,35 +46,19 @@ public:
 
 private:
 	std::string controller_;
-	double press_time_;
-	std::vector<std::string> raw_, toggle_, increment_, axis_hold_, timer_, change_state_;
-	std::vector<int> inrement_n_;
-    raw: ['Y']                        # if unspecified, will default to raw
-    toggle: ['A', 'B']
-    increment: ['Y']
-    increment_n: ['5']
-    axis_hold: ['LRLJ', 'UDLJ']
-    timer: ['None']
-    change: ['None']
+	double press_time_ns_;
+	std::vector<Button> Buttons_;
+	Button hold_;
 
-	rclcpp::TimerBase::SharedPtr status_timer_, fault_timer_;
-	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr motor_state_publisher_;
+	rclcpp::Clock clock_;
 
-	// rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr error_monitor_publisher_;
-	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr motor_command_subscription_;
+	rclcpp::Publisher<sensor_msgs::msg::Joy>::SharedPtr pub_;
+	rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr sub_;
 
-	void motor_callback(const sensor_msgs::msg::JointState::SharedPtr _msg);
-	bool position_status = false, velocity_status = false, effort_status = false;
-	bool effort_as_current = false;
-	void status_callback();
-	void fault_callback();
+	double get_value(std::string _button, sensor_msgs::msg::Joy &_msg);
 
-	void drive_motors(sensor_msgs::msg::JointState &_msg);
-
-	std::vector<rclcpp::Parameter> special_params_;
-	rclcpp::Parameter motor_names_param_;
 	void declare_params();
-	epos2::EPOSParams get_params();
+	void get_params();
 };
 
 #endif
