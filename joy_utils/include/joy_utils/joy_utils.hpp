@@ -13,33 +13,19 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/joy.hpp>
+#include <joy_utils_msgs/msg/button.hpp>
 #include <joy_utils_msgs/msg/joy_utils.hpp>
-
-#include "joy_input.hpp"
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;
 
-struct JoyInput
-{
-	std::string button_;
-	double val_;
-	double val_prev_;
-	int n_;
-	rclcpp::Time time_;
-	double deadband_;
-}
-
 class JoyUtils : public rclcpp::Node
 {
 
-
-
 public:
 
-	sensor_msgs::msg::Joy input_msg_;
-	joy_utils_msgs::msg::JoyUtils remapped_msg_;
-
+	sensor_msgs::msg::Joy input_msg_, prev_msg_;
+	joy_utils_msgs::msg::JoyUtils prev_remapped_msg_, remapped_msg_;
 
 	JoyUtils(std::string _node_name);
 	~JoyUtils();
@@ -47,18 +33,37 @@ public:
 private:
 	std::string controller_;
 	double press_time_ns_;
-	std::vector<Button> Buttons_;
-	Button hold_;
+	std::string hold_button_;
+	bool hold_on_;
+	int hold_d_click_;
+	bool use_l_press_, use_toggle, use_increment_, use_timer_, use_change_s_, use_d_click_;
+	std::vector<std::string> deadband_axes_;
+	std::vector<double> db_;
 
 	rclcpp::Clock clock_;
 
 	rclcpp::Publisher<sensor_msgs::msg::Joy>::SharedPtr pub_;
-	rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr sub_;
+	rclcpp::Subscription<joy_utils_msgs::msg::JoyUtils>::SharedPtr sub_;
 
 	double get_value(std::string _button, sensor_msgs::msg::Joy &_msg);
 
 	void declare_params();
 	void get_params();
+
+	double raw_update(double _value, bool _hold);
+	double increment_update(double _value, bool _hold);
+	double time_on_update(double _value, bool _hold);
+	double time_off_update(double _value, bool _hold);
+	double change_state_update(double _value, bool _hold);
 };
 
 #endif
+	
+	rclcpp::Clock *clock_ptr_;
+
+    double update_button(double _value, bool _hold);
+
+	void add_clock(rclcpp::Clock *_clock_ptr) : clock_ptr_(_clock_ptr){};
+	void add_deadband(double _db) : deadband_(_db){};
+	void add_n(int _n) n_(_n){};
+	void add_hold(bool *_hold_ptr) : hold_ptr_(_hold_ptr){ has_hold_ = true};

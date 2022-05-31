@@ -7,4 +7,3 @@ float64 time_state
 bool rising_edge
 bool falling_edge
 bool double_click
-bool triple_click
