@@ -1,5 +1,4 @@
 float64 raw
-float64 long_press
 bool toggle
 int64 increment
 float64 hold

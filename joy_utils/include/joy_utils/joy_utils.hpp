@@ -31,12 +31,12 @@ public:
 	~JoyUtils();
 
 private:
+	std::vector<std::string> buttons_, axes_;
 	std::string controller_;
 	double press_time_ns_;
 	std::string hold_button_;
 	bool hold_on_;
 	int hold_d_click_;
-	bool use_l_press_, use_toggle, use_increment_, use_timer_, use_change_s_, use_d_click_;
 	std::vector<std::string> deadband_axes_;
 	std::vector<double> db_;
 
@@ -52,10 +52,18 @@ private:
 
 	double raw_update(double _value, bool _hold);
 	double increment_update(double _value, bool _hold);
-	double time_on_update(double _value, bool _hold);
-	double time_off_update(double _value, bool _hold);
+	double time_update(double _value, bool _hold);
 	double change_state_update(double _value, bool _hold);
 };
+
+float64 raw
+bool toggle
+int64 increment
+float64 hold
+float64 time_state
+bool rising_edge
+bool falling_edge
+bool double_click
 
 #endif
 	

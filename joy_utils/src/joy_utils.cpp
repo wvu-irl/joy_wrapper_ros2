@@ -11,26 +11,31 @@
 ///
 ///
 ///
-void JoyUtils::joy_callback(const common_interfaces::msg::Joy::SharedPtr _msg)
+void JoyUtils::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
 {
-    if (prev_msg_.axes[0] != -2)
-    {
-        prev_msg_ = input_msg_;
-    }
-    else
-    {
-        prev_msg_ = *_msg;
-    }
-    input_msg_ = *_msg;
+    joy_utils_msgs::msg::JoyUtils new_msg;
 
-    for (auto &b : _msg->buttons)
-    {
-        
-    }
-    for (auto &ax : _msg->axes)
-    {
+    new_msg.A = update_button();
+    new_msg.B = update_button();
+    new_msg.X = update_button();
+    new_msg.Y = update_button();
+    new_msg.LB = update_button();
+    new_msg.RB = update_button();
+    new_msg.back = update_button();
+    new_msg.start = update_button();
+    new_msg.power = update_button();
+    new_msg.LJ = update_button();
+    new_msg.RJ = update_button();
+    new_msg.LRLJ = update_button();
+    new_msg.UDLJ = update_button();
+    new_msg.LRRJ = update_button();
+    new_msg.UDRJ = update_button();
+    new_msg.LT = update_button();
+    new_msg.RT = update_button();
+    new_msg.LRD = update_button();
+    new_msg.UDD = update_button();
 
-    }
+    pub_.publish(new_msg);
     
 }
 
@@ -112,14 +117,11 @@ double JoyInput::update_button(double _value)
 ///
 ///
 ///
-JoyInput::JoyInput(std::string _button, std::string _mode)
-    : button_(_button), mode_(_mode)
+JoyUtils::JoyUtils(std::string _node_name)
+    : Node(_node_name)
 {
-    val_ = 0;
-    val_prev_ = 0;
-    if (_mode == "toggle")
-        n_ = 1;
-    has_hold_ = false;
+    input_ = ["A", "B",  "X",  "Y",  "LB",  "RB",  "back",  "start",  "power",  "LJ",  "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD"];
+
 }
 
 
