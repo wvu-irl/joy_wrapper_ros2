@@ -31,7 +31,7 @@ public:
 	~JoyUtils();
 
 private:
-	std::vector<std::string> buttons_, axes_;
+	std::vector<std::string> input_;
 	std::string controller_;
 	double press_time_ns_;
 	std::string hold_button_;
