@@ -1,11 +1,23 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>joy_wrapper_msgs</name>
+  <name>joy_wrapper</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="jbeard6@mix.wvu.edu">jared</maintainer>
   <license>TODO: License declaration</license>
+
+  <depend>rclcpp</depend>
+
+  <build_depend>builtin_interfaces</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>joy_wrapper_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>joy_wrapper_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

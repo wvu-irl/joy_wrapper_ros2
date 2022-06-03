@@ -7,13 +7,13 @@
  */
 #include <rclcpp/rclcpp.hpp>
 
-#include <epos_ros2/joy_utils.hpp>
+#include <joy_wrapper/JoyWrapper.hpp>
 
 int main(int argc, char **argv)
 {
 
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<JoyWrapper>("joy_utils_node"));
+    rclcpp::spin(std::make_shared<JoyWrapper>("joy_wrapper_node"));
     rclcpp::shutdown();
 
     return 0;

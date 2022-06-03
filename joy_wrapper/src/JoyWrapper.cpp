@@ -1,17 +1,17 @@
 /*
    Interface for Remapping Buttons
-   joy_utils.hpp
+   joy_wrapper.cpp
    Purpose: Allow for convenient remapping of buttons
    @author Jared Beard
    @version 1.0 5/19/22
  */
 
-#include <joy_utils/joy_utils.hpp>
+#include <joy_wrapper/JoyWrapper.hpp>
 
 ///
 ///
 ///
-void JoyUtils::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
+void JoyWrapper::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
 {
     prev_msg_ = msg_;
     msg_ = *_msg;
@@ -20,51 +20,52 @@ void JoyUtils::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
     prev_time_ = time_;
     time_ = msg_.header.stamp;
 
-    for (auto &[key, val] : map_)
-        input_[val] = update_button(key);
+    for (auto &m : map_)
+        input_[m.second] = update(m.first);
 
     deadband_filter();
 
-    toggle_hold = true;
-    for (auto &btn : hold_buttons)
-        toggle_hold = toggle_hold && input_[map_[btn]].raw && (input_[map_[btn]].change_state > sensitivity_;
+    bool toggle_hold = true;
+    for (auto &btn : hold_buttons_)
+        toggle_hold = toggle_hold && input_[map_[btn]].raw; // && (input_[map_[btn]].time_state > sensitivity_);
 
     if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > sensitivity_))
+    {
         hold_on_ = !hold_on_;
         toggle_time_ = clock_.now();
-
-    joy_utils_msgs::msg::JoyUtils temp_msg;
+    }
+    joy_wrapper_msgs::msg::JoyWrapper temp_msg;
     temp_msg.header = msg_.header;
 
-    temp_msg.A = input_[map_["A"]];
-    temp_msg.B = input_[map_["B"]];
-    temp_msg.X = input_[map_["X"]];
-    temp_msg.Y = input_[map_["Y"]];
-    temp_msg.LB = input_[map_["LB"]];
-    temp_msg.RB = input_[map_["RB"]];
+    temp_msg.a = input_[map_["A"]];
+    temp_msg.b = input_[map_["B"]];
+    temp_msg.x = input_[map_["X"]];
+    temp_msg.y = input_[map_["Y"]];
+    temp_msg.lb = input_[map_["LB"]];
+    temp_msg.rb = input_[map_["RB"]];
     temp_msg.back = input_[map_["back"]];
     temp_msg.start = input_[map_["start"]];
     if (controller_ == "Xbox")
         temp_msg.power = input_[map_["power"]];
-    temp_msg.LJ = input_[map_["LJ"]];
-    temp_msg.RJ = input_[map_["RJ"]];
-    temp_msg.LRLJ = input_[map_["LRLJ"]];
-    temp_msg.UDLJ = input_[map_["UDLJ"]];
-    temp_msg.LRRJ = input_[map_["LRRJ"]];
-    temp_msg.UDRJ = input_[map_["UDRJ"]];
-    temp_msg.LT = input_[map_["LT"]];
-    temp_msg.RT = input_[map_["RT"]];
-    temp_msg.LRD = input_[map_["LRD"]];
-    temp_msg.UDD = input_[map_["UDD"]];
+    temp_msg.lj = input_[map_["LJ"]];
+    temp_msg.rj = input_[map_["RJ"]];
+    temp_msg.lrlj = input_[map_["LRLJ"]];
+    temp_msg.udlj = input_[map_["UDLJ"]];
+    temp_msg.lrrj = input_[map_["LRRJ"]];
+    temp_msg.udrj = input_[map_["UDRJ"]];
+    temp_msg.lt = input_[map_["LT"]];
+    temp_msg.rt = input_[map_["RT"]];
+    temp_msg.lrd = input_[map_["LRD"]];
+    temp_msg.udd = input_[map_["UDD"]];
 
 
-    pub_.publish(temp_msg;);
+    pub_->publish(temp_msg);
 }
 
 ///
 ///
 ///
-joy_utils_msgs::msg::Input JoyInput::deadband_filter()
+void JoyWrapper::deadband_filter()
 {
     for (auto& axis: deadband_axes_)
     {
@@ -76,12 +77,12 @@ joy_utils_msgs::msg::Input JoyInput::deadband_filter()
 ///
 ///
 ///
-joy_utils_msgs::msg::Input JoyInput::update(std::string _input)
+joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
 {
-    joy_utils_msgs::msg::Input btn;
+    joy_wrapper_msgs::msg::Input btn;
 
-    val = get_value(_input, &msg_);
-    prev_val = get_value(_input, &prev_msg_);
+    double val = get_value(_input, &msg_);
+    double prev_val = get_value(_input, &prev_msg_);
 
     // raw
     btn.raw = val;
@@ -122,12 +123,14 @@ joy_utils_msgs::msg::Input JoyInput::update(std::string _input)
     // time_state
     if (prev_val == val)
     {
-        int dt = (msg_.header.stamp - prev_msg_.header.stamp).nanoseconds();
+        rclcpp::Time t1 = msg_.header.stamp;
+        rclcpp::Time t2 = prev_msg_.header.stamp;
+        int dt = (t1 - t2).nanoseconds();
         btn.time_state = input_[map_[_input]].time_state + dt;
     }
     else
     {
-        btm.time_state = 0;
+        btn.time_state = 0;
     }
 
     // falling_edge
@@ -156,106 +159,96 @@ joy_utils_msgs::msg::Input JoyInput::update(std::string _input)
 ///
 ///
 ///
-double JoyUtils::get_value(std::string _input, sensor_msgs::msg::Joy *_msg)
+double JoyWrapper::get_value(std::string _input, sensor_msgs::msg::Joy *_msg)
 {
     if (controller_ == "Xbox")
     {
-        switch (_input)
-        {
-        case "A":
+        if (_input == "A")
             return _msg->buttons[0];
-        case "B":
+        if (_input == "B")
             return _msg->buttons[1];
-        case "X":
+        if (_input == "X")
             return _msg->buttons[2];
-        case "Y":
+        if (_input == "Y")
             return _msg->buttons[3];
-        case "LB":
+        if (_input == "LB")
             return _msg->buttons[4];
-        case "RB":
+        if (_input == "RB")
             return _msg->buttons[5];
-        case "back":
+        if (_input == "back")
             return _msg->buttons[6];
-        case "start":
+        if (_input == "start")
             return _msg->buttons[7];
-        case "power":
+        if (_input == "power")
             return _msg->buttons[8];
-        case "LJB":
+        if (_input == "LJB")
             return _msg->buttons[9];
-        case "RJB":
+        if (_input == "RJB")
             return _msg->buttons[10];
-        case "LRLJ":
+        if (_input == "LRLJ")
             return _msg->axes[0];
-        case "UDLJ":
+        if (_input == "UDLJ")
             return _msg->axes[1];
-        case "LRRJ":
+        if (_input == "LRRJ")
             return _msg->axes[2];
-        case "UDRJ":
+        if (_input == "UDRJ")
             return _msg->axes[3];
-        case "LT":
+        if (_input == "LT")
             return _msg->axes[5];
-        case "RT":
+        if (_input == "RT")
             return _msg->axes[4];
-        case "LRD":
+        if (_input == "LRD")
             return _msg->axes[6];
-        case "UDD":
+        if (_input == "UDD")
             return _msg->axes[7];
-        default:
-            RCLCPP_WARN(this->get_logger(), "Invalid Button");
-        }
     }
-    else if (controller == "Logitech")
+    else if (controller_ == "Logitech")
     {
-        switch (_input)
-        {
-        case "A":
+        if (_input == "A")
             return _msg->buttons[1];
-        case "B":
+        if (_input == "B")
             return _msg->buttons[2];
-        case "X":
+        if (_input == "X")
             return _msg->buttons[0];
-        case "Y":
+        if (_input == "Y")
             return _msg->buttons[3];
-        case "LB":
+        if (_input == "LB")
             return _msg->buttons[4];
-        case "RB":
+        if (_input == "RB")
             return _msg->buttons[5];
-        case "back":
+        if (_input == "back")
             return _msg->buttons[8];
-        case "start":
+        if (_input == "start")
             return _msg->buttons[9];
-        // case "Power":
+        // if (_input == "Power")
         //     return _msg->buttons[8];
-        case "LJB":
+        if (_input == "LJB")
             return _msg->buttons[10];
-        case "RJB":
+        if (_input == "RJB")
             return _msg->buttons[11];
-        case "LRLJ":
+        if (_input == "LRLJ")
             return _msg->axes[0];
-        case "UDLJ":
+        if (_input == "UDLJ")
             return _msg->axes[1];
-        case "LRRJ":
+        if (_input == "LRRJ")
             return _msg->axes[2];
-        case "UDRJ":
+        if (_input == "UDRJ")
             return _msg->axes[3];
-        case "LT":
+        if (_input == "LT")
             return _msg->buttons[6];
-        case "RT":
+        if (_input == "RT")
             return _msg->buttons[7];
-        case "LRD":
+        if (_input == "LRD")
             return _msg->axes[4];
-        case "UDD":
+        if (_input == "UDD")
             return _msg->axes[5];
-        default:
-            RCLCPP_WARN(this->get_logger(), "Invalid Button");
-        }
     }
 }
 
 ///
 ///
 ///
-void JoyUtils::declare_params()
+void JoyWrapper::declare_params()
 {
     // DECLARE PARAMS --------------------------------------------------
 
@@ -271,10 +264,11 @@ void JoyUtils::declare_params()
 ///
 ///
 ///
-void JoyUtils::get_params()
+void JoyWrapper::get_params()
 {
+    rclcpp::Parameter hold_buttons_param, axis_db_param, db_param;
 
-    this->get_parameter("controller", controller_)
+    this->get_parameter("controller", controller_);
 
         this->get_parameter("hold_buttons", hold_buttons_param);
     hold_buttons_ = hold_buttons_param.as_string_array();
@@ -293,7 +287,7 @@ void JoyUtils::get_params()
 ///
 ///
 ///
-JoyUtils::JoyUtils(std::string _node_name)
+JoyWrapper::JoyWrapper(std::string _node_name)
     : Node(_node_name)
 {
     clock_ = rclcpp::Clock();
@@ -302,26 +296,29 @@ JoyUtils::JoyUtils(std::string _node_name)
     hold_on_ = false;
 
     // Publishers
-    pub_ = this->create_publisher<sensor_msgs::msg::JointState>("/joy", 10);
+    pub_ = this->create_publisher<joy_wrapper_msgs::msg::JoyWrapper>("/joy_wrapper", 1);
 
     // Subscriptions
-    sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        "/joy_utils", 1, std::bind(&JoyUtils::joy_callback, this, _1));
+    sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
+        "/joy", 1, std::bind(&JoyWrapper::joy_callback, this, _1));
 
     if (controller_ == "Xbox")
     {
-        input_val_ = [ "A", "B", "X", "Y", "LB", "RB", "back", "start", "power", "LJ", "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD" ];
+        input_val_ = { "A", "B", "X", "Y", "LB", "RB", "back", "start", "power", "LJ", "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD" };
+        // std::vector<double> temp(11,0);
         msg_.buttons = std::vector<int>(11, 0);
-        msg_.axes = std::vector<double>(8, 0);
+        for (int i = 0; i < 8; ++i)
+            msg_.axes.push_back(0.0);
     }
     else if (controller_ == "Logitech")
     {
-        input_val_ = [ "A", "B", "X", "Y", "LB", "RB", "back", "start", "LJ", "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD" ];
+        input_val_ = { "A", "B", "X", "Y", "LB", "RB", "back", "start", "LJ", "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD" };
         msg_.buttons = std::vector<int>(12, 0);
-        msg_.axes = std::vector<double>(6, 0);
+        for (int i = 0; i < 6; ++i)
+            msg_.axes.push_back(0.0);
     }
 
-    joy_utils_msgs::msg::Input temp_button;
+    joy_wrapper_msgs::msg::Input temp_button;
 
     temp_button.raw = 0;
     temp_button.toggle = false;
@@ -332,7 +329,9 @@ JoyUtils::JoyUtils(std::string _node_name)
     temp_button.falling_edge = false;
     temp_button.double_click = false;
 
-    temp_msg.header.stamp = clock_.now();
+    prev_time_ = clock_.now();
+    time_ = prev_time_;
+    toggle_time_ = prev_time_;
 
     for (int i = 0; i < input_val_.size(); ++i)
     {
@@ -344,12 +343,4 @@ JoyUtils::JoyUtils(std::string _node_name)
 
     declare_params();
     get_params();
-}
-
-///
-///
-///
-JoyUtils::~JoyUtils()
-{
-    interface_ptr_->~EPOSWrapper();
 }
