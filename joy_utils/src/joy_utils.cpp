@@ -13,126 +13,154 @@
 ///
 void JoyUtils::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
 {
-    joy_utils_msgs::msg::JoyUtils new_msg;
+    prev_msg_ = msg_;
+    msg_ = *_msg;
 
-    new_msg.A = update_button();
-    new_msg.B = update_button();
-    new_msg.X = update_button();
-    new_msg.Y = update_button();
-    new_msg.LB = update_button();
-    new_msg.RB = update_button();
-    new_msg.back = update_button();
-    new_msg.start = update_button();
-    new_msg.power = update_button();
-    new_msg.LJ = update_button();
-    new_msg.RJ = update_button();
-    new_msg.LRLJ = update_button();
-    new_msg.UDLJ = update_button();
-    new_msg.LRRJ = update_button();
-    new_msg.UDRJ = update_button();
-    new_msg.LT = update_button();
-    new_msg.RT = update_button();
-    new_msg.LRD = update_button();
-    new_msg.UDD = update_button();
+    prev_input_ = input_;
+    prev_time_ = time_;
+    time_ = msg_.header.stamp;
 
-    pub_.publish(new_msg);
-    
+    for (auto &[key, val] : map_)
+        input_[val] = update_button(key);
+
+    deadband_filter();
+
+    toggle_hold = true;
+    for (auto &btn : hold_buttons)
+        toggle_hold = toggle_hold && input_[map_[btn]].raw && (input_[map_[btn]].change_state > sensitivity_;
+
+    if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > sensitivity_))
+        hold_on_ = !hold_on_;
+        toggle_time_ = clock_.now();
+
+    joy_utils_msgs::msg::JoyUtils temp_msg;
+    temp_msg.header = msg_.header;
+
+    temp_msg.A = input_[map_["A"]];
+    temp_msg.B = input_[map_["B"]];
+    temp_msg.X = input_[map_["X"]];
+    temp_msg.Y = input_[map_["Y"]];
+    temp_msg.LB = input_[map_["LB"]];
+    temp_msg.RB = input_[map_["RB"]];
+    temp_msg.back = input_[map_["back"]];
+    temp_msg.start = input_[map_["start"]];
+    if (controller_ == "Xbox")
+        temp_msg.power = input_[map_["power"]];
+    temp_msg.LJ = input_[map_["LJ"]];
+    temp_msg.RJ = input_[map_["RJ"]];
+    temp_msg.LRLJ = input_[map_["LRLJ"]];
+    temp_msg.UDLJ = input_[map_["UDLJ"]];
+    temp_msg.LRRJ = input_[map_["LRRJ"]];
+    temp_msg.UDRJ = input_[map_["UDRJ"]];
+    temp_msg.LT = input_[map_["LT"]];
+    temp_msg.RT = input_[map_["RT"]];
+    temp_msg.LRD = input_[map_["LRD"]];
+    temp_msg.UDD = input_[map_["UDD"]];
+
+
+    pub_.publish(temp_msg;);
 }
 
 ///
 ///
 ///
-double JoyInput::raw_update(double _value, bool _hold)
+joy_utils_msgs::msg::Input JoyInput::deadband_filter()
 {
-    if (!_hold)
+    for (auto& axis: deadband_axes_)
     {
-        val_prev_ = val_;
-        val_ = _value;
+        if (fabs(input_[map_[axis]].raw) <= db_[map_[axis]])
+            input_[map_[axis]].raw = 0;
     }
-    return val_;
 }
 
 ///
 ///
 ///
-double JoyInput::increment_update(double _value, bool _hold)
+joy_utils_msgs::msg::Input JoyInput::update(std::string _input)
 {
-}
+    joy_utils_msgs::msg::Input btn;
 
-///
-///
-///
-double JoyInput::time_on_update(double _value, bool _hold)
-{
-}
+    val = get_value(_input, &msg_);
+    prev_val = get_value(_input, &prev_msg_);
 
-///
-///
-///
-double JoyInput::time_off_update(double _value, bool _hold)
-{
-}
+    // raw
+    btn.raw = val;
 
-///
-///
-///
-double JoyInput::change_state_update(double _value, bool _hold)
-{
-}
-
-///
-///
-///
-
-double JoyInput::update_button(double _value)
-{
-    if (!has_hold_)
+    if (prev_val == 0 && val == 1)
     {
-        _hold = false;
+        // toggle
+        btn.toggle = !input_[map_[_input]].toggle;
+
+        // increment
+        btn.increment = input_[map_[_input]].increment++;
+
+        // rising_edge
+        btn.rising_edge = true;
     }
     else
     {
-        _hold = *hold_ptr;
+        // toggle
+        btn.toggle = input_[map_[_input]].toggle;
+
+        // increment
+        btn.increment = input_[map_[_input]].increment;
+
+        // rising_edge
+        btn.rising_edge = false;
     }
 
-    switch (_button)
+    // hold
+    if (hold_on_)
     {
-    case "raw":
-        return raw_update(_value, _hold);
-    case "toggle":
-        return increment_update(_value, _hold);
-    case "increment":
-        return increment_update(_value, _hold);
-    case "time_on":
-        return raw_update(_value, _hold);
-    case "time_off":
-        return raw_update(_value, _hold);
-    case "change_state":
-        return raw_update(_value, _hold);
-    default:
-        RCLCPP_WARN(this->get_logger(), "Invalid Mode");
+        btn.hold = input_[map_[_input]].hold;
     }
+    else
+    {
+        btn.hold = val;
+    }
+
+    // time_state
+    if (prev_val == val)
+    {
+        int dt = (msg_.header.stamp - prev_msg_.header.stamp).nanoseconds();
+        btn.time_state = input_[map_[_input]].time_state + dt;
+    }
+    else
+    {
+        btm.time_state = 0;
+    }
+
+    // falling_edge
+    if (prev_val == 1 && val == 0)
+    {
+        btn.falling_edge = true;
+    }
+    else
+    {
+        btn.falling_edge = false;
+    }
+
+    // double_click
+    if (input_[map_[_input]].rising_edge && prev_input_[map_[_input]].time_state < sensitivity_)
+    {
+        btn.double_click = true;
+    }
+    else
+    {
+        btn.double_click = false;
+    }
+
+    return btn;
 }
 
 ///
 ///
 ///
-JoyUtils::JoyUtils(std::string _node_name)
-    : Node(_node_name)
-{
-    input_ = ["A", "B",  "X",  "Y",  "LB",  "RB",  "back",  "start",  "power",  "LJ",  "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD"];
-
-}
-
-
-///
-///
-///
-double JoyUtils::get_value(std::string _button, sensor_msgs::msg::Joy *_msg)
+double JoyUtils::get_value(std::string _input, sensor_msgs::msg::Joy *_msg)
 {
     if (controller_ == "Xbox")
     {
-        switch (_button)
+        switch (_input)
         {
         case "A":
             return _msg->buttons[0];
@@ -146,11 +174,11 @@ double JoyUtils::get_value(std::string _button, sensor_msgs::msg::Joy *_msg)
             return _msg->buttons[4];
         case "RB":
             return _msg->buttons[5];
-        case "Back":
+        case "back":
             return _msg->buttons[6];
-        case "Start":
+        case "start":
             return _msg->buttons[7];
-        case "Power":
+        case "power":
             return _msg->buttons[8];
         case "LJB":
             return _msg->buttons[9];
@@ -178,7 +206,7 @@ double JoyUtils::get_value(std::string _button, sensor_msgs::msg::Joy *_msg)
     }
     else if (controller == "Logitech")
     {
-        switch (_button)
+        switch (_input)
         {
         case "A":
             return _msg->buttons[1];
@@ -192,9 +220,9 @@ double JoyUtils::get_value(std::string _button, sensor_msgs::msg::Joy *_msg)
             return _msg->buttons[4];
         case "RB":
             return _msg->buttons[5];
-        case "Back":
+        case "back":
             return _msg->buttons[8];
-        case "Start":
+        case "start":
             return _msg->buttons[9];
         // case "Power":
         //     return _msg->buttons[8];
@@ -232,107 +260,90 @@ void JoyUtils::declare_params()
     // DECLARE PARAMS --------------------------------------------------
 
     this->declare_parameter("controller", "Logitech");
+    this->declare_parameter("hold_buttons", std::vector<std::string>());
+    this->declare_parameter("hold_double_click", 1);
+    this->declare_parameter("axis_deadband", std::vector<std::string>());
+    this->declare_parameter("deadband", std::vector<double>()); //uint8_t
+        this->declare_parameter("sensnitivity", 50); //uint8_t
 
-    this->declare_parameter("press_time", 100); // in nanoseconds
-
-    this->declare_parameter("raw", std::vector<std::string>());
-    this->declare_parameter("toggle", std::vector<std::string>());
-    this->declare_parameter("increment", std::vector<std::string>());
-    this->declare_parameter("increment_n", std::vector<int64_t>());
-    this->declare_parameter("axis_hold", std::vector<std::string>());
-    this->declare_parameter("hold_button", "back");
-    this->declare_parameter("time_on", std::vector<std::string>());
-    this->declare_parameter("time_off", std::vector<std::string>());
-    this->declare_parameter("change_state", std::vector<std::string>());
 }
 
+///
+///
+///
 void JoyUtils::get_params()
 {
 
     this->get_parameter("controller", controller_)
 
-        this->get_parameter("press_time", press_time_ns_); // in nanoseconds
+        this->get_parameter("hold_buttons", hold_buttons_param);
+    hold_buttons_ = hold_buttons_param.as_string_array();
 
-    ///////////////////////////////////////////
-    std::vector<Button> Buttons_;
+    this->get_parameter("hold_double_click", hold_d_click_);
 
-    this->get_parameter("raw", std::vector<std::string>());
-    this->get_parameter("toggle", std::vector<std::string>());
-    this->get_parameter("increment", std::vector<std::string>());
-    this->get_parameter("increment_n", std::vector<int64_t>());
-    this->get_parameter("axis_hold", std::vector<std::string>());
-    this->declare_parameter("hold_button", "back");
-    this->declare_parameter("time_on", std::vector<std::string>());
-    this->declare_parameter("time_off", std::vector<std::string>());
-    this->get_parameter("change_state", std::vector<std::string>());
+    this->get_parameter("axis_deadband", axis_db_param);
+    deadband_axes_ = axis_db_param.as_string_array();
 
-    epos2::EPOSParams params;
-    int special_param_counter = 0;
+    this->get_parameter("deadband", db_param);
+    db_ = db_param.as_double_array();
 
-    // Motors
-    this->get_parameter("motor_names", motor_names_param_);
-    params.motor_names = motor_names_param_.as_string_array();
-    //++special_param_counter;
-
-    std::vector<int> ids;
-    rclcpp::Parameter motor_ids_param = this->get_parameter("motor_ids");
-    ids = std::vector<int>(motor_ids_param.as_integer_array().begin(),
-                           motor_ids_param.as_integer_array().end());
-    //++special_param_counter;
-
-    for (std::vector<int>::size_type i = 0; i < ids.size(); ++i)
-    {
-        params.motor_ids.insert(std::make_pair(params.motor_names[i], ids[i]));
-        params.motor_inds.insert(std::make_pair(params.motor_names[i], i));
-    }
-
-    // Maxon Motors
-    epos2::MaxonMotor temp_motor;
-    for (std::vector<int>::size_type i = 0; i < ids.size(); ++i)
-    {
-        temp_motor.index = ids[i];
-        this->get_parameter("motor_params/gear_ratio", temp_motor.gear_ratio);
-        this->get_parameter("motor_params/counts_per_rev", temp_motor.counts_per_rev);
-        this->get_parameter("motor_params/wheel_radius/cm", temp_motor.wheel_radius);
-        this->get_parameter("motor_params/kT", temp_motor.kT);
-        this->get_parameter("motor_params/user_limits/ang_vel_rpm", temp_motor.ang_vel_limit);
-        this->get_parameter("motor_params/user_limits/acc_rpm", temp_motor.acc_limit);
-        this->get_parameter("motor_params/absolute_limits/curr_stall_a", temp_motor.stall_current);
-        this->get_parameter("motor_params/user_limits/curr_inst_a", temp_motor.instantaneous_current_limit);
-        this->get_parameter("motor_params/user_limits/curr_cont_a", temp_motor.continuous_current_limit);
-
-        params.motors.push_back(temp_motor);
-    }
-
-    // EPOS Modules
-    this->get_parameter("epos_module/protocol", params.protocol_stack_name);
-    this->get_parameter("epos_module/com_interface", params.interface_name);
-    this->get_parameter("epos_module/port", params.port_name);
-    this->get_parameter("epos_module/baud_rate", params.baud_rate);
-    this->get_parameter("motor_close_timeout", params.motor_close_timeout);
-
-    // // Logging
-    this->get_parameter("logging/throttle", params.throttle);
-
-    return params;
+     this->get_parameter("sensitivity", sensitivity_);
 }
 
 ///
 ///
 ///
-JoyUtils::JoyUtils(std::string _node_name) : Node(_node_name, "ftr")
+JoyUtils::JoyUtils(std::string _node_name)
+    : Node(_node_name)
 {
-    // PARAM INITILIZATION ------------------------------------------------------------------------
-    declare_params();
-    get_params();
-    this->clock_ = rclcpp::Clock();
+    clock_ = rclcpp::Clock();
+    prev_time_ = clock_.now();
+    time_ = prev_time_;
+    hold_on_ = false;
 
     // Publishers
-    this->pub_ = this->create_publisher<sensor_msgs::msg::JointState>("/joy", 10);
+    pub_ = this->create_publisher<sensor_msgs::msg::JointState>("/joy", 10);
 
     // Subscriptions
-    this->sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+    sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
         "/joy_utils", 1, std::bind(&JoyUtils::joy_callback, this, _1));
+
+    if (controller_ == "Xbox")
+    {
+        input_val_ = [ "A", "B", "X", "Y", "LB", "RB", "back", "start", "power", "LJ", "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD" ];
+        msg_.buttons = std::vector<int>(11, 0);
+        msg_.axes = std::vector<double>(8, 0);
+    }
+    else if (controller_ == "Logitech")
+    {
+        input_val_ = [ "A", "B", "X", "Y", "LB", "RB", "back", "start", "LJ", "RJ", "LRLJ", "UDLJ", "LRRJ", "UDRJ", "LT", "RT", "LRD", "UDD" ];
+        msg_.buttons = std::vector<int>(12, 0);
+        msg_.axes = std::vector<double>(6, 0);
+    }
+
+    joy_utils_msgs::msg::Input temp_button;
+
+    temp_button.raw = 0;
+    temp_button.toggle = false;
+    temp_button.increment = 0;
+    temp_button.hold = 0;
+    temp_button.time_state = 0;
+    temp_button.rising_edge = false;
+    temp_button.falling_edge = false;
+    temp_button.double_click = false;
+
+    temp_msg.header.stamp = clock_.now();
+
+    for (int i = 0; i < input_val_.size(); ++i)
+    {
+        map_.insert({input_val_[i], i});
+        prev_input_.push_back(temp_button);
+    }
+
+    input_ = prev_input_;
+
+    declare_params();
+    get_params();
 }
 
 ///
