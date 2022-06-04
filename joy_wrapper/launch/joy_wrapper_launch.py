@@ -13,7 +13,7 @@ def generate_launch_description():
     )
     
     joy_node = Node(
-        namespace='/joy',
+        #namespace='/joy',
         package='joy',
         executable='joy_node',
         name='joy_node'#,
@@ -24,12 +24,13 @@ def generate_launch_description():
     )
 
     joy_wrapper_node = Node(
-        namespace='/joy_wrapper',
+        #namespace='/joy_wrapper',
         package='joy_wrapper',
         executable='joy_wrapper_node',
         name='joy_wrapper_node',
         parameters=[joy_wrapper_params],
-        arguments=['--ros-args', '--log-level', ["debug"]]#,
+        arguments=['--ros-args', '--log-level', ["debug"]],
+        output = {'both': 'screen'}
         #prefix=['gdb -ex run --args']
         #prefix=['xterm -e gdb -ex run --args']
         #prefix=['gnome-terminal -x gdb -ex run --args']

@@ -5,6 +5,7 @@
    @author Jared Beard
    @version 1.0 5/19/22
  */
+#include <iostream>
 
 #include <joy_wrapper/JoyWrapper.hpp>
 
@@ -268,9 +269,10 @@ void JoyWrapper::get_params()
 {
     rclcpp::Parameter hold_buttons_param, axis_db_param, db_param;
 
+
     this->get_parameter("controller", controller_);
 
-        this->get_parameter("hold_buttons", hold_buttons_param);
+    this->get_parameter("hold_buttons", hold_buttons_param);
     hold_buttons_ = hold_buttons_param.as_string_array();
 
     this->get_parameter("hold_double_click", hold_d_click_);
@@ -294,6 +296,9 @@ JoyWrapper::JoyWrapper(std::string _node_name)
     prev_time_ = clock_.now();
     time_ = prev_time_;
     hold_on_ = false;
+
+    declare_params();
+    get_params();
 
     // Publishers
     pub_ = this->create_publisher<joy_wrapper_msgs::msg::JoyWrapper>("/joy_wrapper", 1);
@@ -341,6 +346,4 @@ JoyWrapper::JoyWrapper(std::string _node_name)
 
     input_ = prev_input_;
 
-    declare_params();
-    get_params();
 }
