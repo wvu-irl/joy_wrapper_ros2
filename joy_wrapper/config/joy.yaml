@@ -5,4 +5,4 @@
     hold_double_click: 1                # if using multiple buttons, this should be 1
     axis_deadband: ['LRLJ' 'UDLJ' 'LRRJ' 'UDRJ' 'RT' 'LT' 'LRD' 'UDD'] 
     deadband: [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ]
-    sensitivity: 50 #nanoseconds
+    sensitivity: 1000 #nanoseconds

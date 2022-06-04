@@ -38,7 +38,7 @@ private:
 	int hold_d_click_;
 	std::vector<std::string> deadband_axes_;
 	std::vector<double> db_;
-	double sensitivity_;
+	int sensitivity_;
 
 	rclcpp::Clock clock_;
 

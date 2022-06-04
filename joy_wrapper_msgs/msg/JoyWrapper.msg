@@ -18,3 +18,4 @@ joy_wrapper_msgs/Input lt
 joy_wrapper_msgs/Input rt
 joy_wrapper_msgs/Input lrd
 joy_wrapper_msgs/Input udd
+bool hold_on

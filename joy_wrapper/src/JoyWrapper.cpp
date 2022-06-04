@@ -30,7 +30,7 @@ void JoyWrapper::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
     for (auto &btn : hold_buttons_)
         toggle_hold = toggle_hold && input_[map_[btn]].raw; // && (input_[map_[btn]].time_state > sensitivity_);
 
-    if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > sensitivity_))
+    if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > 5000*sensitivity_))
     {
         hold_on_ = !hold_on_;
         toggle_time_ = clock_.now();
@@ -59,7 +59,7 @@ void JoyWrapper::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
     temp_msg.lrd = input_[map_["LRD"]];
     temp_msg.udd = input_[map_["UDD"]];
 
-
+    temp_msg.hold_on = hold_on_;
     pub_->publish(temp_msg);
 }
 
@@ -94,8 +94,11 @@ joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
         btn.toggle = !input_[map_[_input]].toggle;
 
         // increment
-        btn.increment = input_[map_[_input]].increment++;
+        std::cout << input_[map_[_input]].increment << std::endl;
+        std::cout << input_[map_[_input]].increment++ << std::endl;
 
+        btn.increment = input_[map_[_input]].increment++;
+        std::cout << btn.increment << std::endl;
         // rising_edge
         btn.rising_edge = true;
     }
@@ -258,7 +261,7 @@ void JoyWrapper::declare_params()
     this->declare_parameter("hold_double_click", 1);
     this->declare_parameter("axis_deadband", std::vector<std::string>());
     this->declare_parameter("deadband", std::vector<double>()); //uint8_t
-        this->declare_parameter("sensnitivity", 50); //uint8_t
+    this->declare_parameter("sensitivity", 50); //uint8_t
 
 }
 
@@ -275,6 +278,10 @@ void JoyWrapper::get_params()
     this->get_parameter("hold_buttons", hold_buttons_param);
     hold_buttons_ = hold_buttons_param.as_string_array();
 
+    std::cout << "--------" << std::endl;
+    for (auto &btn : hold_buttons_)
+        std::cout << btn << std::endl;
+
     this->get_parameter("hold_double_click", hold_d_click_);
 
     this->get_parameter("axis_deadband", axis_db_param);
@@ -283,7 +290,8 @@ void JoyWrapper::get_params()
     this->get_parameter("deadband", db_param);
     db_ = db_param.as_double_array();
 
-     this->get_parameter("sensitivity", sensitivity_);
+    this->get_parameter("sensitivity", sensitivity_);
+
 }
 
 ///
