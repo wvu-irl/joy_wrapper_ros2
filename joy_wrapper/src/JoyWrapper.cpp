@@ -68,10 +68,14 @@ void JoyWrapper::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
 ///
 void JoyWrapper::deadband_filter()
 {
-    for (auto& axis: deadband_axes_)
+    for (int i = 0; i < input_val_.size(); ++i)
     {
-        if (fabs(input_[map_[axis]].raw) <= db_[map_[axis]])
-            input_[map_[axis]].raw = 0;
+        for (int j = 0; j < deadband_axes_.size(); ++j)
+        {
+            if (input_val_[i] == deadband_axes_[j] && fabs(input_[i].raw) <= db_[j])
+                input_[i].raw = 0;
+
+        }
     }
 }
 
@@ -147,15 +151,27 @@ joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
         btn.falling_edge = false;
     }
 
-    // // double_click
-    // if (input_[map_[_input]].rising_edge && prev_input_[map_[_input]].time_state < sensitivity_)
+    // double_click -> Note, I believe double click strings together so 3 clicks will result in 2 double clicks
+
+    // if (_input == "RT")
     // {
-    //     btn.double_click = true;
+    //     RCLCPP_WARN(this->get_logger(), "------------------------------------------------------------");
+    //     RCLCPP_WARN(this->get_logger(), "CURR");
+    //     RCLCPP_WARN(this->get_logger(), std::to_string(btn.raw).c_str());
+    //     RCLCPP_WARN(this->get_logger(), std::to_string(btn.time_state).c_str());
+    //     RCLCPP_WARN(this->get_logger(), std::to_string(btn.rising_edge).c_str());
+    //     RCLCPP_WARN(this->get_logger(), "PREV");
+    //     RCLCPP_WARN(this->get_logger(), std::to_string(prev_input_[map_["RT"]].raw).c_str());
+    //     RCLCPP_WARN(this->get_logger(), std::to_string(prev_input_[map_["RT"]].time_state).c_str());
     // }
-    // else
-    // {
-    //     btn.double_click = false;
-    // }
+    if (btn.rising_edge && prev_input_[map_[_input]].time_state < 4e5*sensitivity_)
+    {
+        btn.double_click = true;
+    }
+    else
+    {
+        btn.double_click = false;
+    }
 
     return btn;
 }
@@ -277,35 +293,27 @@ void JoyWrapper::get_params()
     RCLCPP_WARN(this->get_logger(), ("Controller: " + controller_).c_str());
 
     this->get_parameter("hold_buttons", hold_buttons_param);
-    hold_buttons_ = std::vector<std::string>(hold_buttons_param.as_string_array().begin(), hold_buttons_param.as_string_array().end());
-
+    hold_buttons_ = hold_buttons_param.as_string_array();
     RCLCPP_WARN(this->get_logger(), "Hold buttons: ");
-    std::cout << hold_buttons_.size() << std::endl;
     for (auto &btn : hold_buttons_)
         RCLCPP_WARN(this->get_logger(), btn.c_str());
 
     this->get_parameter("hold_double_click", hold_d_click_);
-
     RCLCPP_WARN(this->get_logger(), ("Double click: " + std::to_string(hold_d_click_)).c_str());
 
     this->get_parameter("axis_deadband", axis_db_param);
     deadband_axes_ = axis_db_param.as_string_array();
-
     RCLCPP_WARN(this->get_logger(), "Deadband Axes: ");
-    std::cout << deadband_axes_.size() << std::endl;
     for (auto &ax : deadband_axes_)
         RCLCPP_WARN(this->get_logger(), ax.c_str());
 
     this->get_parameter("deadband", db_param);
-    db_ = std::vector<double>(db_param.as_double_array().begin(),db_param.as_double_array().end()) ;
-
+    db_ = db_param.as_double_array();
     RCLCPP_WARN(this->get_logger(), "Deadband: ");
-    std::cout << db_.size() << std::endl;
     for (auto &db : db_)
         RCLCPP_WARN(this->get_logger(), std::to_string(db).c_str());
 
     this->get_parameter("sensitivity", sensitivity_);
-
     RCLCPP_WARN(this->get_logger(), ("Sensitivity: " + std::to_string(sensitivity_)).c_str());
 
 }
