@@ -33,9 +33,10 @@ private:
 	rclcpp::Time prev_time_, time_, toggle_time_;
 	std::vector<joy_wrapper_msgs::msg::Input> prev_input_, input_;
 	std::string controller_;
-	std::vector<std::string> input_val_, hold_buttons_;
+	std::vector<std::string> input_val_;
+	std::string hold_button_;
 	bool hold_on_;
-	int hold_d_click_;
+	bool hold_d_click_;
 	std::vector<std::string> deadband_axes_;
 	std::vector<double> db_;
 	int sensitivity_;

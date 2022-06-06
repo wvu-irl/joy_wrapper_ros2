@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
     controller: 'Logitech'
-    hold_buttons: ['back'] 
-    hold_double_click: 1  
+    hold_button: 'back'
+    hold_double_click: false
     axis_deadband: ['LRLJ', 'UDLJ', 'LRRJ', 'UDRJ', 'RT', 'LT', 'LRD', 'UDD'] 
     deadband: [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ]
     sensitivity: 1000 

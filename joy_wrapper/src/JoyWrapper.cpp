@@ -26,15 +26,14 @@ void JoyWrapper::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
 
     deadband_filter();
 
-    // bool toggle_hold = true;
-    // for (auto &btn : hold_buttons_)
-    //     toggle_hold = toggle_hold && input_[map_[btn]].raw; // && (input_[map_[btn]].time_state > sensitivity_);
+    if (hold_d_click_ && input_[map_[hold_button_]].double_click)
+    {
+        hold_on_ = !hold_on_;
+    } else if (!hold_d_click_ && input_[map_[hold_button_]].rising_edge)
+    {
+        hold_on_ = !hold_on_;
+    }
 
-    // if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > 5000*sensitivity_))
-    // {
-    //     hold_on_ = !hold_on_;
-    //     toggle_time_ = clock_.now();
-    // }
     joy_wrapper_msgs::msg::JoyWrapper temp_msg;
     temp_msg.header = msg_.header;
 
@@ -119,14 +118,14 @@ joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
     }
 
     // hold
-    // if (hold_on_)
-    // {
-    //     btn.hold = input_[map_[_input]].hold;
-    // }
-    // else
-    // {
-    //     btn.hold = val;
-    // }
+    if (hold_on_)
+    {
+        btn.hold = input_[map_[_input]].hold;
+    }
+    else
+    {
+        btn.hold = val;
+    }
 
     // time_state
     if (prev_val == val)
@@ -273,8 +272,8 @@ void JoyWrapper::declare_params()
     // DECLARE PARAMS --------------------------------------------------
 
     this->declare_parameter("controller", "Logitech");
-    this->declare_parameter("hold_buttons", std::vector<std::string>());
-    this->declare_parameter("hold_double_click", 1);
+    this->declare_parameter("hold_button", "back");
+    this->declare_parameter("hold_double_click", false);
     this->declare_parameter("axis_deadband", std::vector<std::string>());
     this->declare_parameter("deadband", std::vector<double>()); //uint8_t
     this->declare_parameter("sensitivity", 50); //uint8_t
@@ -292,11 +291,8 @@ void JoyWrapper::get_params()
     this->get_parameter("controller", controller_);
     RCLCPP_WARN(this->get_logger(), ("Controller: " + controller_).c_str());
 
-    this->get_parameter("hold_buttons", hold_buttons_param);
-    hold_buttons_ = hold_buttons_param.as_string_array();
-    RCLCPP_WARN(this->get_logger(), "Hold buttons: ");
-    for (auto &btn : hold_buttons_)
-        RCLCPP_WARN(this->get_logger(), btn.c_str());
+    this->get_parameter("hold_button", hold_button_);
+    RCLCPP_WARN(this->get_logger(), ("Hold button: " + hold_button_).c_str());
 
     this->get_parameter("hold_double_click", hold_d_click_);
     RCLCPP_WARN(this->get_logger(), ("Double click: " + std::to_string(hold_d_click_)).c_str());
