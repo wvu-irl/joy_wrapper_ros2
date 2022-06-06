@@ -69,6 +69,10 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 install (TARGETS
   joy_wrapper_node
   DESTINATION lib/${PROJECT_NAME}

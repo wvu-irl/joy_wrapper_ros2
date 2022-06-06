@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
-    controller: 'Logitech'            # Xbox
-    hold_buttons: ['back']            # buttons to push to engage hold (multiclick used for double/triple click)
-    hold_double_click: 1                # if using multiple buttons, this should be 1
-    axis_deadband: ['LRLJ' 'UDLJ' 'LRRJ' 'UDRJ' 'RT' 'LT' 'LRD' 'UDD'] 
+    controller: 'Logitech'
+    hold_buttons: ['back'] 
+    hold_double_click: 1  
+    axis_deadband: ['LRLJ', 'UDLJ', 'LRRJ', 'UDRJ', 'RT', 'LT', 'LRD', 'UDD'] 
     deadband: [ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ]
-    sensitivity: 1000 #nanoseconds
+    sensitivity: 1000 

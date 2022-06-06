@@ -29,7 +29,7 @@ def generate_launch_description():
         executable='joy_wrapper_node',
         name='joy_wrapper_node',
         parameters=[joy_wrapper_params],
-        arguments=['--ros-args', '--log-level', ["debug"]],
+        arguments=['--ros-args', '--log-level', ["warn"]],
         output = {'both': 'screen'}#,
         #prefix=['gdb -ex run --args']
         #prefix=['xterm -e gdb -ex run --args']

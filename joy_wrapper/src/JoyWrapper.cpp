@@ -26,15 +26,15 @@ void JoyWrapper::joy_callback(const sensor_msgs::msg::Joy::SharedPtr _msg)
 
     deadband_filter();
 
-    bool toggle_hold = true;
-    for (auto &btn : hold_buttons_)
-        toggle_hold = toggle_hold && input_[map_[btn]].raw; // && (input_[map_[btn]].time_state > sensitivity_);
+    // bool toggle_hold = true;
+    // for (auto &btn : hold_buttons_)
+    //     toggle_hold = toggle_hold && input_[map_[btn]].raw; // && (input_[map_[btn]].time_state > sensitivity_);
 
-    if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > 5000*sensitivity_))
-    {
-        hold_on_ = !hold_on_;
-        toggle_time_ = clock_.now();
-    }
+    // if (toggle_hold == true && ((clock_.now()-toggle_time_).nanoseconds() > 5000*sensitivity_))
+    // {
+    //     hold_on_ = !hold_on_;
+    //     toggle_time_ = clock_.now();
+    // }
     joy_wrapper_msgs::msg::JoyWrapper temp_msg;
     temp_msg.header = msg_.header;
 
@@ -94,11 +94,11 @@ joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
         btn.toggle = !input_[map_[_input]].toggle;
 
         // increment
-        std::cout << input_[map_[_input]].increment << std::endl;
-        std::cout << input_[map_[_input]].increment++ << std::endl;
+        // std::cout << input_[map_[_input]].increment << std::endl;
+        // std::cout << input_[map_[_input]].increment++ << std::endl;
 
-        btn.increment = input_[map_[_input]].increment++;
-        std::cout << btn.increment << std::endl;
+        btn.increment = ++(input_[map_[_input]].increment);
+        // std::cout << btn.increment << std::endl;
         // rising_edge
         btn.rising_edge = true;
     }
@@ -115,14 +115,14 @@ joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
     }
 
     // hold
-    if (hold_on_)
-    {
-        btn.hold = input_[map_[_input]].hold;
-    }
-    else
-    {
-        btn.hold = val;
-    }
+    // if (hold_on_)
+    // {
+    //     btn.hold = input_[map_[_input]].hold;
+    // }
+    // else
+    // {
+    //     btn.hold = val;
+    // }
 
     // time_state
     if (prev_val == val)
@@ -147,15 +147,15 @@ joy_wrapper_msgs::msg::Input JoyWrapper::update(std::string _input)
         btn.falling_edge = false;
     }
 
-    // double_click
-    if (input_[map_[_input]].rising_edge && prev_input_[map_[_input]].time_state < sensitivity_)
-    {
-        btn.double_click = true;
-    }
-    else
-    {
-        btn.double_click = false;
-    }
+    // // double_click
+    // if (input_[map_[_input]].rising_edge && prev_input_[map_[_input]].time_state < sensitivity_)
+    // {
+    //     btn.double_click = true;
+    // }
+    // else
+    // {
+    //     btn.double_click = false;
+    // }
 
     return btn;
 }
@@ -274,23 +274,39 @@ void JoyWrapper::get_params()
 
 
     this->get_parameter("controller", controller_);
+    RCLCPP_WARN(this->get_logger(), ("Controller: " + controller_).c_str());
 
     this->get_parameter("hold_buttons", hold_buttons_param);
-    hold_buttons_ = hold_buttons_param.as_string_array();
+    hold_buttons_ = std::vector<std::string>(hold_buttons_param.as_string_array().begin(), hold_buttons_param.as_string_array().end());
 
-    std::cout << "--------" << std::endl;
+    RCLCPP_WARN(this->get_logger(), "Hold buttons: ");
+    std::cout << hold_buttons_.size() << std::endl;
     for (auto &btn : hold_buttons_)
-        std::cout << btn << std::endl;
+        RCLCPP_WARN(this->get_logger(), btn.c_str());
 
     this->get_parameter("hold_double_click", hold_d_click_);
+
+    RCLCPP_WARN(this->get_logger(), ("Double click: " + std::to_string(hold_d_click_)).c_str());
 
     this->get_parameter("axis_deadband", axis_db_param);
     deadband_axes_ = axis_db_param.as_string_array();
 
+    RCLCPP_WARN(this->get_logger(), "Deadband Axes: ");
+    std::cout << deadband_axes_.size() << std::endl;
+    for (auto &ax : deadband_axes_)
+        RCLCPP_WARN(this->get_logger(), ax.c_str());
+
     this->get_parameter("deadband", db_param);
-    db_ = db_param.as_double_array();
+    db_ = std::vector<double>(db_param.as_double_array().begin(),db_param.as_double_array().end()) ;
+
+    RCLCPP_WARN(this->get_logger(), "Deadband: ");
+    std::cout << db_.size() << std::endl;
+    for (auto &db : db_)
+        RCLCPP_WARN(this->get_logger(), std::to_string(db).c_str());
 
     this->get_parameter("sensitivity", sensitivity_);
+
+    RCLCPP_WARN(this->get_logger(), ("Sensitivity: " + std::to_string(sensitivity_)).c_str());
 
 }
 
