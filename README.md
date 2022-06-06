@@ -10,8 +10,6 @@ Purpose is to remap joy inputs to specific buttons, accessed by name. This also 
 - falling edge detection
 - double click detection (note these string together so 3 fast clicks counts as 2 double clicks, may debug later, can avoid this with larger sensitivity)
 
-Project -> joy_wrapper
-
 Users should launch 
 
 ``` 
@@ -23,3 +21,4 @@ Subscribe to
 \joy_wrapper
 ```
 
+Also, users can adjust double click sensitivity in the joy.yaml file
